@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .search, .filter, .pagination {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .search input {
+      width: 70%;
+      padding: 8px;
+      margin-right: 10px;
+    }
+
+    .search button, .pagination button {
+      padding: 8px 15px;
+    }
+
+    .filter select {
+      padding: 8px;
+    }
+
+    .user-list table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .user-list th, .user-list td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .pagination button {
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>User Management App</h1>
+
+    
+    <div class="search">
+      <input type="text" id="searchInput" placeholder="Search by name">
+      <button id="searchButton">Search</button>
+    </div>
+
+   
+    <div class="filter">
+      <select id="emailDomainFilter">
+        <option value="">All Domains</option>
+        <option value="@example.com">@example.com</option>
+        <option value="@sample.com">@sample.com</option>
+         
+      </select>
+    </div>
+
+    
+    <div class="user-list">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody id="userTable">
+           
+        </tbody>
+      </table>
+    </div>
+
+   
+    <div class="pagination">
+      <button id="prevPage">Previous</button>
+      <span id="currentPage">Page 1</span>
+      <button id="nextPage">Next</button>
+    </div>
+  </div>
+
+  
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"></script>
+  <script>
+    
+    const firebaseConfig = {
+      apiKey: "your-api-key",
+      authDomain: "your-auth-domain",
+      databaseURL: "https://your-database-url.firebaseio.com",
+      projectId: "your-project-id",
+      storageBucket: "your-storage-bucket",
+      messagingSenderId: "your-messaging-sender-id",
+      appId: "your-app-id",
+    };
+
+    
+    const { initializeApp } = firebase;
+    const { getDatabase, ref, get } = firebase.database;
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    
+    let users = [];
+    let filteredUsers = [];
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 5;
+
+   
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+    const emailDomainFilter = document.getElementById("emailDomainFilter");
+    const userTable = document.getElementById("userTable");
+    const prevPageButton = document.getElementById("prevPage");
+    const nextPageButton = document.getElementById("nextPage");
+    const currentPageLabel = document.getElementById("currentPage");
+
+    
+    const fetchUsers = async () => {
+      try {
+        const usersRef = ref(database, "users");
+        const snapshot = await get(usersRef);
+
+        if (snapshot.exists()) {
+          users = Object.values(snapshot.val());
+          filteredUsers = users;  
+          displayUsers();
+        } else {
+          console.log("No user data found.");
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+     
+    const displayUsers = () => {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const usersToDisplay = filteredUsers.slice(startIndex, endIndex);
+
+       
+      userTable.innerHTML = "";
+
+       
+      usersToDisplay.forEach(user => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${user.name}</td>
+          <td>${user.email}</td>
+        `;
+        userTable.appendChild(row);
+      });
+
+      currentPageLabel.textContent = `Page ${currentPage}`;
+    };
+
+     
+    searchButton.addEventListener("click", () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      filteredUsers = users.filter(user => user.name.toLowerCase().includes(searchTerm));
+      currentPage = 1;  
+      displayUsers();
+    });
+
+  
+    emailDomainFilter.addEventListener("change", () => {
+      const domain = emailDomainFilter.value;
+      filteredUsers = domain
+        ? users.filter(user => user.email.endsWith(domain))
+        : users;
+
+      currentPage = 1;  
+      displayUsers();
+    });
+
+    
+    prevPageButton.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        displayUsers();
+      }
+    });
+
+    nextPageButton.addEventListener("click", () => {
+      if (currentPage < Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)) {
+        currentPage++;
+        displayUsers();
+      }
+    });
+
+     
+    fetchUsers();
+  </script>
+</body>
+</html>
